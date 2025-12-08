@@ -1,3 +1,0 @@
-/Users/mvc/Documents/C++/SysCalls/Parking/build/CMakeFiles/Parking.dir
-/Users/mvc/Documents/C++/SysCalls/Parking/build/CMakeFiles/edit_cache.dir
-/Users/mvc/Documents/C++/SysCalls/Parking/build/CMakeFiles/rebuild_cache.dir

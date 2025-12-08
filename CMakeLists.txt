@@ -17,3 +17,8 @@ add_executable(Parking ${SOURCES})
 
 find_package(Threads REQUIRED)
 target_link_libraries(Parking Threads::Threads)
+
+
+# В папке build
+# 1. Запускаем сборку cmake ..
+# 2. make

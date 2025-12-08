@@ -12,26 +12,24 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include "ICommunication.h"
 
 using namespace std;
 
-// Драйвер для шлагбаума
-class SerialPort {
+class SerialPort: public ICommunication {
 private:
     mutex portMutex;
     int fileDescriptor;
     bool isConnect;
 public:
     SerialPort();
-    ~SerialPort();
-    
-    bool connect(const std::string& portName);
-    void disconnect();
-    bool sendData(const std::string& data);
-    bool sendBytes(const std::vector<uint8_t>& data);
-    int readBytes(std::vector<uint8_t>& buffer, int expectedLength, int timeout);
-    // Очистка канала
-    void flush();
+    ~SerialPort() override;
+
+    bool connect(const std::string& address) override;
+    void disconnect() override;
+    bool sendBytes(const std::vector<uint8_t>& data) override;
+    int readBytes(std::vector<uint8_t>& buffer, int expected, int timeout) override;
+    void flush() override;
 };
 
 #endif /* SerialPort_hpp */

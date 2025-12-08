@@ -6,6 +6,7 @@
 //
 
 #include "SerialPort.hpp"
+#include "ICommunication.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -18,12 +19,9 @@ using namespace std;
 
 SerialPort::SerialPort() : fileDescriptor(-1), isConnect(false) {}
 
-// Порт закроется когда объект удалится из памяти
-SerialPort::~SerialPort() {
-    
-}
+SerialPort::~SerialPort() {}
 
-bool SerialPort::connect(const std::string& portName) {
+bool SerialPort::connect(const string& portName) {
     
     // Открываем порт как обычный файл
     // O_RDWR - чтение и запись
@@ -78,21 +76,6 @@ void SerialPort::disconnect() {
         isConnect = false;
         std::cout << "Отключились." << std::endl;
     }
-}
-
-bool SerialPort::sendData(const string& data) {
-    if (!isConnect) {
-        return false;
-    }
-    
-    int bytesWritten = write(fileDescriptor, data.c_str(), data.length());
-    
-    if (bytesWritten < 0) {
-        cerr << "Ошибка записи: " << strerror(errno) << endl;
-        return false;
-    }
-    
-    return true;
 }
 
 bool SerialPort::sendBytes(const vector<uint8_t>& data) {
@@ -172,7 +155,6 @@ void SerialPort::flush() {
     if (fileDescriptor != -1) {
         // блокируем поток
         lock_guard<mutex> lock(portMutex);
-        
         tcflush(fileDescriptor, TCIOFLUSH);
     }
 }

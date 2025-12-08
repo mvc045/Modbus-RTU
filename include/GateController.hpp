@@ -10,16 +10,17 @@
 
 #include <stdio.h>
 #include "SerialPort.hpp"
+#include "ICommunication.h"
 #include <unistd.h>
 
 using namespace std;
 
 class GateController {
 private:
-    SerialPort port;
+    ICommunication& port;
     uint8_t deviceId;
 public:
-    bool init(const string& devicePath, const uint8_t& id);
+    GateController(ICommunication& channel, uint8_t id) : port(channel), deviceId(id) {}
     
     void openGate();
     void waitForOpen();

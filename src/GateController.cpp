@@ -13,12 +13,6 @@
 
 using namespace std;
 
-bool GateController::init(const string& devicePath, const uint8_t& id) {
-    deviceId = id;
-    port.flush();
-    return port.connect(devicePath);
-}
-
 void GateController::openGate() {
     cout << "[Controller] Отправили команду на открытие\n";
     

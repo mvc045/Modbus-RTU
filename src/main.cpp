@@ -33,12 +33,16 @@ int main(int argc, const char * argv[]) {
     int deviceId = config.getInt("barrier_id");
     string portName = config.getString("serial_port");
     
-    GateController gateController;
+    SerialPort port;
     
-    if (!gateController.init(portName, deviceId)) {
+    if(!port.connect(portName)) {
         cerr << "Ошибка инициализации контроллера управления шлагбаумом.\n";
-        abort();
+        return 1;
     }
+    
+    port.flush();
+    
+    GateController gateController(port, static_cast<uint8_t>(deviceId));
     
     // Поднимаем HTTP сервер
     httplib::Server svr;
