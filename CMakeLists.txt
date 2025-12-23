@@ -20,9 +20,13 @@ source_group("Resources" FILES ${CONFIGS})
 
 # Собираем список всех .cpp файлов из папки src
 file(GLOB SOURCES "src/*.cpp")
-
-# Создаем исполняемый файл (Executable)
 add_executable(Parking ${SOURCES} ${HEADERS} ${CONFIGS})
+
+
+# 2. ЭМУЛЯТОР RFID (C++ Tool)
+file(GLOB RFID_TOOL_SOURCES "Emulators/RFIDTool/*.cpp")
+source_group("Emulator Source" FILES ${RFID_TOOL_SOURCES})
+add_executable(RfidTool ${RFID_TOOL_SOURCES})
 
 find_package(Threads REQUIRED)
 target_link_libraries(Parking Threads::Threads)

@@ -13,8 +13,10 @@
 #include <iostream>
 #include <unistd.h>
 #include "Middleware.hpp"
+#include "RfidReader.hpp"
 
 // HTTP сервер
+#include "HTTPServer.hpp"
 #include "httplib.h"
 // Парсим json
 #include "json.hpp"
@@ -36,7 +38,6 @@ int main(int argc, const char * argv[]) {
     
     int deviceId = config.getInt("barrier_id");
     string portName = config.getString("serial_port");
-    string apiKey = config.getString("api_key");
     
     SerialPort port;
     
@@ -49,77 +50,51 @@ int main(int argc, const char * argv[]) {
     
     GateController gateController(port, static_cast<uint8_t>(deviceId));
     
-    // Создаем файл с бд
     Database db("parking_01.db");
     
-    // Поднимаем HTTP сервер
-    httplib::Server svr;
-    
-    svr.Get("/history", [&](const httplib::Request& req, httplib::Response& res) {
-        json history = db.getHistory();
-        res.set_content(history.dump(4), "application/json");
+    // Настраиваем логирование
+    gateController.setLogger([&db, deviceId](string type, string msg) {
+        db.logEvent(type, msg, deviceId);
+        cout << "[" << type << "] " << msg << "\n";
     });
     
-    svr.Get("/status", [&](const httplib::Request& req, httplib::Response& res) {
-        bool isOpen = gateController.isGateOpen();
+    // RFID
+    string portRFID = config.getString("rfid_port");
+    
+    RfidReader rfid;
+    
+    if (rfid.connect(portRFID)) {
+        cout << "[RFID] Подключились к считывателю: " << portRFID << "\n";
+    }
+    
+    rfid.setCallBack([&](string cardCode) {
+        cout << "[RFID] Сканируем карту: " << cardCode << "\n";
         
-        json response;
-        response["device_id"] = deviceId;
-        response["status"] = isOpen ? "open" : "closed";
-        response["timestamp"] = time(nullptr);
-        res.set_content(response.dump(), "application/json");
+        if (db.checkAccessRFID(cardCode)) {
+            cout << "[RFID] Доступ открыт \n";
+            db.logEvent("RFID", string("Открыт доступ для: ") + cardCode, 0);
+            
+            try {
+                // true - нужно автозакрытие по таймауту
+                gateController.openGate(true);
+            } catch (const exception& e) {
+                cerr << "Ошибка при открытии ворот: " << e.what() << "\n";
+            }
+            
+        } else {
+            cout << "[RFID] Ошибка при сканировании \n";
+        }
+
     });
     
-    svr.Post("/open", Middleware::withAuth(apiKey, [&](const httplib::Request& req, httplib::Response& res) {
-        json response;
-        
-        try {
-            gateController.openGate();
-            response["ok"] = true;
-            response["timestamp"] = time(nullptr);
-            
-            db.logEvent("INFO", "Шлагбаум открыт", deviceId);
-            
-            res.set_content(response.dump(), "application/json");
-        } catch (const exception& e) {
-            // Отлавливаем ошибки
-            response["ok"] = false;
-            response["message"] = e.what();
-            
-            db.logEvent("ERROR", string("Ошибка: ") + e.what(), deviceId);
-            
-            res.status = 500;
-            res.set_content(response.dump(), "application/json");
-        }
-    }));
+    rfid.start();
     
-    svr.Post("/close", Middleware::withAuth(apiKey, [&](const httplib::Request& req, httplib::Response& res) {
-        json response;
-        
-        try {
-            gateController.closeGate();
-            
-            response["ok"] = true;
-            response["timestamp"] = time(nullptr);
-            
-            db.logEvent("INFO", "Шлагбаум закрыт", deviceId);
-            
-            res.set_content(response.dump(), "application/json");
-        } catch (const exception& e) {
-            response["ok"] = false;
-            response["message"] = e.what();
-            
-            db.logEvent("ERROR", string("Ошибка: ") + e.what(), deviceId);
-            
-            res.status = 500;
-            res.set_content(response.dump(), "application/json");
-        }
-    }));
-    
+    // HTTP
+    string apiKey = config.getString("api_key");
     int portHTTP = config.getInt("port_http");
     
-    cout << "HTTP server run ... \n";
-    svr.listen("0.0.0.0", portHTTP);
+    HTTPServer httpServer(gateController, db, apiKey);
+    httpServer.start(portHTTP);
     
     return 0;
 }

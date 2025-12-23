@@ -11,27 +11,25 @@
 #include <unistd.h>
 #include <thread>
 #include <stdexcept>
+#include "ConfigLoader.hpp"
 
 using namespace std;
 
-void GateController::openGate() {
+void GateController::openGate(bool autoClose) {
     cout << "[Controller] Отправили команду на открытие\n";
     
     ModbusFrame frame = { deviceId, Command::WRITE_SINGL_COIL, 0x0000, Action::OPEN };
     auto rawData = frame.serialize();
 
     port.sendBytes(rawData);
-    cout << "Отправили пакет Modbus размером " << rawData.size() << " байт\n";
-
+    
     // по стандарту modbus, устройство должно прислать ответ (ACK)
     vector<uint8_t> response;
     int bytesRead = port.readBytes(response, 8, 2); // Ждем 8 байт, 2 секунды
 
     // Проверяем что вернулось 8 байт
     if (bytesRead != 8) {
-        cerr << "[Controller] Ошибка, с ответом от шлагбаума что то не так\n";
-        cerr << "[Controller] " << bytesRead << "\n";
-        
+        log("Error", "Ошибка, с ответом от шлагбаума что то не так");
         throw runtime_error("Ошибка, с ответом от шлагбаума что то не так");
         return;
     }
@@ -42,11 +40,33 @@ void GateController::openGate() {
     uint16_t calcCRC = ModbusUtils::calculateCRC(dataOnly);
 
     if (receivedCRC == calcCRC) {
-        cout << "[Controller] CRC совпадают\n";
-        cout << "[Controller] Шлагбаум начал открываться\n";
+        log("Controller", "CRC совпадают. Шлагбаум начал открываться");
         waitForOpen();
+        log("Controller", "Шлагбаум открыт");
+        
+        // Логика для автозакрытия
+        if (autoClose) {
+            thread t([this]() {
+                // Загружаем конфиг
+                string pathConfig = "/Users/mvc/Documents/C++/SysCalls/Parking/config.txt";
+                ConfigLoader config;
+                if (!config.load(pathConfig)) {
+                    cout << "Файл не найден\n";
+                }
+                //
+                int timeout = config.getInt("timeout_open_gate");
+                
+                log("INFO", "Запущен таймер автозакрытия");
+                
+                this_thread::sleep_for(chrono::seconds(timeout));
+                this->closeGate();
+            });
+            t.detach();
+            
+        }
+        
     } else {
-        cerr << "[Controller] CRC не совпали\n";
+        log("Error", "CRC не совпали");
         throw runtime_error("CRC не совпали");
     }
 }
@@ -117,6 +137,7 @@ void GateController::closeGate() {
     port.sendBytes(rawData);
     
     waitForClose();
+    log("Controller", "Шлагбаум закрыт");
 }
 
 void GateController::waitForClose() {
@@ -125,7 +146,6 @@ void GateController::waitForClose() {
     auto startTime = chrono::steady_clock::now();
     
     while (true) {
-        
         if (GateController::isGateClose()) {
             cout << "[Polling] Шлагбаум закрыт \n";
             break;

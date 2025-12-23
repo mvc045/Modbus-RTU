@@ -12,17 +12,30 @@
 #include "SerialPort.hpp"
 #include "ICommunication.h"
 #include <unistd.h>
+#include <functional>
 
 using namespace std;
 
 class GateController {
+    using LogCallback = function<void(string type, string message)>;
 private:
     ICommunication& port;
+    LogCallback logger;
     uint8_t deviceId;
 public:
     GateController(ICommunication& channel, uint8_t id) : port(channel), deviceId(id) {}
     
-    void openGate();
+    void setLogger(LogCallback cb) {
+        logger = cb;
+    }
+    
+    void log(const string& type, const string& msg) {
+        if (logger) {
+            logger(type, msg);
+        }
+    }
+    
+    void openGate(bool autoClose = false);
     void waitForOpen();
     bool isGateOpen();
     

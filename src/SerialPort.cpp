@@ -127,10 +127,7 @@ int SerialPort::readBytes(vector<uint8_t>& buffer, int expectedLength, int timeo
         if (result < 0) {
             cout << "Ошибка в ACK\n";
             return -1;
-        } else if (result == 0) {
-            cout << "Время ожидания вышло\n";
-            break;
-        }
+        } 
         
         if (FD_ISSET(fileDescriptor, &readfts)) {
             int bytesToRead = expectedLength - totalBytesRead;

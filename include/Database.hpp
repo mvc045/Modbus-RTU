@@ -14,6 +14,13 @@
 
 using namespace std;
 
+enum RFIDCardCreationResult {
+    Success,
+    ErrorNameExists,
+    ErrorCodeExists,
+    Error
+};
+
 class Database {
 private:
     sqlite3* db;
@@ -25,6 +32,8 @@ public:
     void logEvent(const string& type, const string& message, const int& deviceId);
     string getCurrentTime();
     nlohmann::json getHistory();
+    bool checkAccessRFID(const string& cardCode);
+    RFIDCardCreationResult createRFIDCard(const string& username, const string& cardCode);
     
 };
 
