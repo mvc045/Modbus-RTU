@@ -48,14 +48,13 @@ void ParkingSystem::setup() {
         db.logEvent(type, msg, this->config.getInt("barrier_id"));
         // в Терминал
         cout << "[" << type << "] " << msg << "\n";
+        
         // в WebSocket
-        
         if (msg.find("открыт") != string::npos) {
-            this->networkServer.broadcastStatus("Open");
+            this->networkServer.broadcastEvent("GateStatus", { {"state", "Open"} });
         } else if (msg.find("закрыт") != string::npos) {
-            this->networkServer.broadcastStatus("Closed");
+            this->networkServer.broadcastEvent("GateStatus", { {"state", "Closed"} });
         }
-        
     });
     
     rfidReader.setCallBack([this](string cardCode) {
@@ -69,9 +68,11 @@ void ParkingSystem::processRFIDCard(const string& cardCode) {
     if (db.checkAccessRFID(cardCode)) {
         cout << "[RFID] Доступ получен для " << cardCode;
         db.logEvent("RFID", "Доступ получен для " + cardCode, config.getInt("barrier_id"));
+        this->networkServer.broadcastEvent("RFID Scanned", { {"access", true}, {"card_code", cardCode} });
     } else {
         cout << "[RFID] Нет доступа для - " << cardCode;
         db.logEvent("RFID", "Нет доступа для - " + cardCode, config.getInt("barrier_id"));
+        this->networkServer.broadcastEvent("RFID Scanned", { {"access", false}, {"card_code", cardCode} });
     }
 }
 

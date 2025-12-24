@@ -38,7 +38,7 @@ private:
 public:
     NetworkServer(GateController& gc, Database& db, const string& key);
     void start(int port);
-    void broadcastStatus(const string& status);
+    void broadcastEvent(const string& eventType, const json& data);
 };
 
 #endif /* NetworkServer_hpp */

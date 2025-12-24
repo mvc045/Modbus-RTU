@@ -183,24 +183,18 @@ void NetworkServer::start(int port) {
     serverThread.detach();
 }
 
-// Отправка днных из другого потока (RFID например) в потоке uWS
-void NetworkServer::broadcastStatus(const string& status) {
+void NetworkServer::broadcastEvent(const string& eventType, const json& data) {
     if (!loop || !globalApp) return;
     
-    struct Payload {
-        string text;
-    };
+    json payload;
+    payload["event"] = eventType;
+    payload["data"] = data;
+    payload["timestamp"] = time(nullptr);
     
-    auto* payload = new Payload{status};
+    string message = payload.dump();
     
-    loop->defer([this, payload]() {
-        json j;
-        j["event"] = "gate_ipdate";
-        j["status"] = payload->text;
-        
-        this->globalApp->publish("broadcast", j.dump(), uWS::OpCode::TEXT);
-        
-        delete payload;
+    loop->defer([this, message]() {
+        this->globalApp->publish("broadcast", message, uWS::OpCode::TEXT, false);
     });
 }
 

@@ -4,7 +4,7 @@
 serial_port=/dev/ttys006
 
 # RFID считыватель
-rfid_port=/dev/ttys007
+rfid_port=/dev/ttys013
 
 # ID нашего шлагбаума (slave ID)
 barrier_id=0
